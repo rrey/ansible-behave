@@ -77,6 +77,21 @@ behave:
   output_name: "base.feature.output"
 '''
 
+def parse_behave_output(output_file_path):
+    """Return the feature status extracted from the behave output file
+
+    Argument:
+        output_file_path (str): behave output file encoded in JSON.
+
+    Returns dict
+    """
+    data = json.load(open(output_file_path, 'r'))
+    result = {}
+    for item in data:
+        name = item['name']
+        result[name] = item["status"]
+    return result
+
 def main():
 
     argument_spec = dict(
@@ -127,18 +142,22 @@ def main():
 
     CMD = "behave {lang} {tags} {formatter} {output} {feature}"
 
-    rc, stdout, stderr = module.run_command(
+    rc, _, stderr = module.run_command(
         CMD.format(lang=LANG, tags=TAGS, formatter=FORMAT,
                    output=OUTPUT.format(feature=name), feature=FEAT),
         cwd=path)
 
+    statuses = "UNAVAILABLE"
+    if output_format in ["json.pretty", "json"]:
+        statuses = json.dumps(parse_behave_output(outputfile_fullpath))
+
     if keep_output is False:
-        module.cleanup(os.path.join(output_dir, output_name))
+        module.cleanup(outputfile_fullpath)
+
     if rc != 0:
-        module.fail_json(changed=False, stdout=stdout, stderr=stderr,
-                         msg="feature has at least one error",
-                         feature=name)
-    module.exit_json(changed=False, feature=name, stdout=stdout)
+        module.fail_json(changed=False, msg="Some test cases failed",
+                         statuses=statuses, stderr=stderr)
+    module.exit_json(changed=False, msg=statuses)
 
 from ansible.module_utils.basic import *
 from ansible.module_utils.urls import *
