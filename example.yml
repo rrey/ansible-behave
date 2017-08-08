@@ -1,0 +1,11 @@
+---
+
+- hosts: localhost
+  tasks:
+    - name: "running test {{ item }}"
+      behave:
+        name: "{{ item }}"
+        path: "{{ playbook_dir }}/behave-test"
+        language: en
+      with_items:
+          - sample.feature

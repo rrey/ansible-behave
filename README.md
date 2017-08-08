@@ -3,4 +3,10 @@ Wrapper around behave (http://pythonhosted.org/behave/)
 
 # Usage
 
-Use the module to run behave tests on remote servers.
+Use behave module to run behave tests on remote servers.
+
+# Example
+
+```
+$ ansible-playbook --module-path=./modules example.yml
+```
