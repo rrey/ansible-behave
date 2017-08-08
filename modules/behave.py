@@ -46,6 +46,12 @@ options:
         Directory where the behave output file will be written.
     default: "/tmp"
     required: false
+  keep_output:
+    description:
+        Specifies if output file should be kept after test execution.
+        Default is False to avoid leaving files on the remote server.
+    default: False
+    required: false
 '''
 
 EXAMPLES = '''
@@ -84,6 +90,7 @@ def main():
         output_name = dict(required=False, type='str',
                            default="{feature}_result"),
         output_dir = dict(required=False, type='str', default="/tmp"),
+        keep_output = dict(required=False, type='bool', default=False),
     )
 
     module = AnsibleModule(argument_spec=argument_spec)
@@ -95,12 +102,13 @@ def main():
     output_format = module.params.get('output_format')
     output_name = module.params.get('output_name')
     output_dir = module.params.get('output_dir')
+    keep_output = module.params.get('keep_output')
 
     if "{feature}" not in output_name:
         module.fail_json(
             msg="The {feature} formatter is required in output_name string")
-    else:
-        output_name = output_name.format(feature=os.path.basename(name))
+    output_name = output_name.format(feature=os.path.basename(name))
+    outputfile_fullpath = os.path.join(output_dir, output_name)
 
     FEAT = ""
     if name:
@@ -115,7 +123,7 @@ def main():
         TAGS = "--tags=%s" % tags
 
     FORMAT = "--format %s" % output_format
-    OUTPUT = "--outfile %s" % os.path.join(output_dir, output_name)
+    OUTPUT = "--outfile %s" % outputfile_fullpath
 
     CMD = "behave {lang} {tags} {formatter} {output} {feature}"
 
@@ -124,6 +132,8 @@ def main():
                    output=OUTPUT.format(feature=name), feature=FEAT),
         cwd=path)
 
+    if keep_output is False:
+        module.cleanup(os.path.join(output_dir, output_name))
     if rc != 0:
         module.fail_json(changed=False, stdout=stdout, stderr=stderr,
                          msg="feature has at least one error",
