@@ -37,11 +37,15 @@ options:
     required: false
   output_name:
     description:
-        Name of the file where the behave ouput will be stored.
+        Name of the file where the behave output will be stored.
     default: "{feature}_result"
              where "{feature}" will be replaced by the feature filename
     required: false
-
+  output_dir:
+    description:
+        Directory where the behave output file will be written.
+    default: "/tmp"
+    required: false
 '''
 
 EXAMPLES = '''
@@ -79,6 +83,7 @@ def main():
                              choices=['pretty', 'json.pretty']),
         output_name = dict(required=False, type='str',
                            default="{feature}_result"),
+        output_dir = dict(required=False, type='str', default="/tmp"),
     )
 
     module = AnsibleModule(argument_spec=argument_spec)
@@ -88,6 +93,14 @@ def main():
     language = module.params.get('language')
     tags = module.params.get('tags')
     output_format = module.params.get('output_format')
+    output_name = module.params.get('output_name')
+    output_dir = module.params.get('output_dir')
+
+    if "{feature}" not in output_name:
+        module.fail_json(
+            msg="The {feature} formatter is required in output_name string")
+    else:
+        output_name = output_name.format(feature=os.path.basename(name))
 
     FEAT = ""
     if name:
@@ -102,7 +115,7 @@ def main():
         TAGS = "--tags=%s" % tags
 
     FORMAT = "--format %s" % output_format
-    OUTPUT = "--outfile {feature}_result"
+    OUTPUT = "--outfile %s" % os.path.join(output_dir, output_name)
 
     CMD = "behave {lang} {tags} {formatter} {output} {feature}"
 
@@ -117,7 +130,7 @@ def main():
                          feature=name)
     module.exit_json(changed=False, feature=name, stdout=stdout)
 
-from ansible.module_utils.basic import * #pylint: disable=redefined-builtin
+from ansible.module_utils.basic import *
 from ansible.module_utils.urls import *
 
 if __name__ == "__main__":
